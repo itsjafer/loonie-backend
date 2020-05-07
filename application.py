@@ -44,25 +44,25 @@ html = '''
 app.add_url_rule('/', 'index', (lambda: html))
 
 
-def get_balances(public_token: str):
+def get_balances(access_token: str):
     """Uses an access token to parse and return basic balance information
 
     Arguments:
-        public_token {str} -- Public token for a given Item
+        access_token {str} -- Public token for a given Item
 
     Returns:
         List -- A list of tuples of (balance dict, account name)
     """
-    # Exchange public token for an access token
-    exchange_response = \
-        client.Item.public_token.exchange(public_token)
-
-    access_token = exchange_response['access_token']
-
-    balance_response = client.Accounts.balance.get(access_token)
+    try:
+        balance_response = client.Accounts.balance.get(access_token)
+    except plaid.errors.PlaidError as e:
+        print(e)
+        return []
 
     balances = [{
-        'name': account['name'], 'amount': account['balances']['current'],
+        'name': account['official_name'] or account['name'],
+        'amount': account['balances']['current']
+        if account['type'] != 'credit' else -account['balances']['current'],
         'currency': account['balances']['iso_currency_code'],
     } for account in balance_response['accounts']]
 
@@ -76,15 +76,24 @@ def pretty_print_response(response):
 
 
 @cross_origin(supports_credentials=True)
+@app.route('/get_access_token', methods=['POST'])
+def get_access_tokens():
+    token = request.form['token']
+    print(token)
+    access_token = client.Item.public_token.exchange(token)['access_token']
+
+    return jsonify(access_token)
+
+
+@cross_origin(supports_credentials=True)
 @app.route('/get_accounts', methods=['POST'])
 def get_accounts():
-    tokens = request.form['tokens'].split(',')
-    try:
-        accounts = [
-            balance for token in tokens for balance in get_balances(token)
-        ]
-    except plaid.errors.PlaidError as e:
-        return str(e)
+    print(request.form['access_tokens'])
+    access_tokens = request.form['access_tokens'].split(',')
+    accounts = [
+        balance for token in access_tokens
+        for balance in get_balances(token)
+    ]
     return jsonify(accounts)
 
 
