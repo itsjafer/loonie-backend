@@ -1,0 +1,5 @@
+awsebcli
+flask==1.0.2
+plaid-python
+pre-commit
+python-dotenv

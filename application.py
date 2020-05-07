@@ -2,9 +2,13 @@ import json
 import os
 
 import plaid
-from dotenv import load_dotenv
+from flask import Flask
+from flask import jsonify
+from flask import request
+# from dotenv import load_dotenv
 
-load_dotenv()
+app = Flask(__name__)
+# load_dotenv()
 
 PLAID_CLIENT_ID = os.getenv('PLAID_CLIENT_ID')
 PLAID_SECRET = os.getenv('PLAID_SECRET')
@@ -20,6 +24,20 @@ client = plaid.Client(
     public_key=PLAID_PUBLIC_KEY, environment=PLAID_ENV,
     api_version='2019-05-29',
 )
+
+html = '''
+<html>
+<head>
+<title>My Flask Application</title>
+</head>
+<body>
+<h1>This is the Home page!</h1>
+</body>
+</html>
+'''
+
+
+app.add_url_rule('/', 'index', (lambda: html))
 
 
 def get_balances(access_token: str):
@@ -37,8 +55,10 @@ def get_balances(access_token: str):
         print(e)
         return
 
-    balances = [(account['balances'], account['name'])
-                for account in balance_response['accounts']]
+    balances = [{
+        'name': account['name'], 'amount': account['balances']['current'],
+        'currency': account['balances']['iso_currency_code'],
+    } for account in balance_response['accounts']]
 
     pretty_print_response(balance_response)
 
@@ -49,7 +69,13 @@ def pretty_print_response(response):
     print(json.dumps(response, indent=2, sort_keys=True))
 
 
-if __name__ == "__main__":
+@app.route('/get_accounts', methods=['POST'])
+def get_accounts():
+    tokens = request.form['tokens'].split(',')
+    accounts = [balance for token in tokens for balance in get_balances(token)]
+    return jsonify(accounts)
 
-    access_tokens = ACCESS_TOKENS.split(',')
-    accounts = [get_balances(token) for token in access_tokens]
+
+if __name__ == '__main__':
+    app.debug = True
+    app.run(host='0.0.0.0')
