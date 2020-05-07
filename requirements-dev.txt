@@ -1,5 +1,6 @@
 awsebcli
 flask==1.0.2
+Flask-Caching
 flask_cors
 forex-python
 plaid-python

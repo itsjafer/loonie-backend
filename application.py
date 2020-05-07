@@ -5,13 +5,18 @@ import plaid
 from flask import Flask
 from flask import jsonify
 from flask import request
+from flask_caching import Cache
 from flask_cors import CORS
 from flask_cors import cross_origin
 from forex_python.converter import CurrencyRates
+
 c = CurrencyRates()
 # from dotenv import load_dotenv
 
 app = Flask(__name__)
+cache = Cache(app, config={'CACHE_TYPE': 'simple'})
+
+
 CORS(app, supports_credentials=True)
 
 # load_dotenv()
@@ -95,6 +100,7 @@ def get_access_tokens():
 
 @cross_origin(supports_credentials=True)
 @app.route('/get_accounts', methods=['POST'])
+@cache.cached(timeout=1200)
 def get_accounts():
     print(request.form['access_tokens'])
     access_tokens = request.form['access_tokens'].split(',')
