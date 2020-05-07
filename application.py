@@ -5,9 +5,13 @@ import plaid
 from flask import Flask
 from flask import jsonify
 from flask import request
+from flask_cors import CORS
+from flask_cors import cross_origin
 # from dotenv import load_dotenv
 
 app = Flask(__name__)
+CORS(app, supports_credentials=True)
+
 # load_dotenv()
 
 PLAID_CLIENT_ID = os.getenv('PLAID_CLIENT_ID')
@@ -40,20 +44,22 @@ html = '''
 app.add_url_rule('/', 'index', (lambda: html))
 
 
-def get_balances(access_token: str):
+def get_balances(public_token: str):
     """Uses an access token to parse and return basic balance information
 
     Arguments:
-        access_token {str} -- Access token for a given Item
+        public_token {str} -- Public token for a given Item
 
     Returns:
         List -- A list of tuples of (balance dict, account name)
     """
-    try:
-        balance_response = client.Accounts.balance.get(access_token)
-    except plaid.errors.PlaidError as e:
-        print(e)
-        return
+    # Exchange public token for an access token
+    exchange_response = \
+        client.Item.public_token.exchange(public_token)
+
+    access_token = exchange_response['access_token']
+
+    balance_response = client.Accounts.balance.get(access_token)
 
     balances = [{
         'name': account['name'], 'amount': account['balances']['current'],
@@ -69,13 +75,19 @@ def pretty_print_response(response):
     print(json.dumps(response, indent=2, sort_keys=True))
 
 
+@cross_origin(supports_credentials=True)
 @app.route('/get_accounts', methods=['POST'])
 def get_accounts():
     tokens = request.form['tokens'].split(',')
-    accounts = [balance for token in tokens for balance in get_balances(token)]
+    try:
+        accounts = [
+            balance for token in tokens for balance in get_balances(token)
+        ]
+    except plaid.errors.PlaidError as e:
+        return str(e)
     return jsonify(accounts)
 
 
 if __name__ == '__main__':
     app.debug = True
-    app.run(host='0.0.0.0')
+    app.run()

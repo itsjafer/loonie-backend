@@ -1,5 +1,6 @@
 awsebcli
 flask==1.0.2
+flask_cors
 plaid-python
 pre-commit
 python-dotenv
