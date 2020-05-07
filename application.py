@@ -7,6 +7,8 @@ from flask import jsonify
 from flask import request
 from flask_cors import CORS
 from flask_cors import cross_origin
+from forex_python.converter import CurrencyRates
+c = CurrencyRates()
 # from dotenv import load_dotenv
 
 app = Flask(__name__)
@@ -61,9 +63,15 @@ def get_balances(access_token: str):
 
     balances = [{
         'name': account['official_name'] or account['name'],
-        'amount': account['balances']['current']
-        if account['type'] != 'credit' else -account['balances']['current'],
-        'currency': account['balances']['iso_currency_code'],
+        'amount': c.convert(
+            account['balances']['iso_currency_code'],
+            'USD', account['balances']['current'],
+        )
+        if account['type'] != 'credit' else -c.convert(
+            account['balances']['iso_currency_code'],
+            'USD', account['balances']['current'],
+        ),
+        'currency': 'USD',
     } for account in balance_response['accounts']]
 
     pretty_print_response(balance_response)
