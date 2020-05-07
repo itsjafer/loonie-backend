@@ -11,7 +11,6 @@ from flask_cors import cross_origin
 from forex_python.converter import CurrencyRates
 
 c = CurrencyRates()
-# from dotenv import load_dotenv
 
 app = Flask(__name__)
 cache = Cache(app, config={'CACHE_TYPE': 'simple'})
@@ -19,7 +18,6 @@ cache = Cache(app, config={'CACHE_TYPE': 'simple'})
 
 CORS(app, supports_credentials=True)
 
-# load_dotenv()
 
 PLAID_CLIENT_ID = os.getenv('PLAID_CLIENT_ID')
 PLAID_SECRET = os.getenv('PLAID_SECRET')
@@ -68,7 +66,9 @@ def get_balances(access_token: str):
 
     balances = [{
         'name': account['official_name'] or account['name'],
-        'amount': c.convert(
+        'amount': account['balances']['current']
+        if account['type'] != 'credit' else -account["balances"]["current"],
+        'usd_amount': c.convert(
             account['balances']['iso_currency_code'],
             'USD', account['balances']['current'],
         )
@@ -76,7 +76,15 @@ def get_balances(access_token: str):
             account['balances']['iso_currency_code'],
             'USD', account['balances']['current'],
         ),
-        'currency': 'USD',
+        'cad_amount': c.convert(
+            account['balances']['iso_currency_code'],
+            'CAD', account['balances']['current'],
+        )
+        if account['type'] != 'credit' else -c.convert(
+            account['balances']['iso_currency_code'],
+            'CAD', account['balances']['current'],
+        ),
+        'currency': account['balances']['iso_currency_code'],
     } for account in balance_response['accounts']]
 
     pretty_print_response(balance_response)
