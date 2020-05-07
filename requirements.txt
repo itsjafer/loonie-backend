@@ -1,3 +1,4 @@
 flask
+plaid-python
 pre-commit
 python-dotenv

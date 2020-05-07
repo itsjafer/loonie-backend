@@ -2,3 +2,4 @@ venv
 .tox
 .mypy_cache
 .vscode
+.env
