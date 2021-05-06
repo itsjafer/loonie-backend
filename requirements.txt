@@ -22,7 +22,7 @@ docutils==0.15.2
 filelock==3.0.12
 Flask==1.0.2
 Flask-Caching==1.8.0
-Flask-Cors==3.0.8
+Flask-Cors==3.0.9
 forex-python==1.5
 future==0.16.0
 identify==1.4.15
